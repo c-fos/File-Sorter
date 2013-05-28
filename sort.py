@@ -118,7 +118,7 @@ def sort_files(folder_name, dest, recur, other):
         p = os.path.join(folder_name, file)
         if os.path.isdir(p) is True:
             if recur:
-                sort_files(p, dest, recur)
+                sort_files(p, dest, recur, other)
             else:
                 if file not in list(types.values()):
                     d = os.path.join(dest, types['directory'])
@@ -171,7 +171,6 @@ def main():
         sys.exit(1)
 
     ensure_dir(destination)
-    print(directory, destination, options.recursive, options.other)
     sort_files(directory, destination, options.recursive, options.other)
     dir_clean(destination)
 
