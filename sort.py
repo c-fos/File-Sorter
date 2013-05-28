@@ -47,6 +47,7 @@ types = {'directory': 'Directory',
          '.xls': 'Documents',
          '.php': 'Scripts',
          '.odt': 'Documents',
+         '.ods': 'Documents',
          '.ppt': 'Documents',
          '.xcf': 'Photoshop',
          '.psd': 'Photoshop',
@@ -126,7 +127,7 @@ def sort_files(folder_name, dest, recur):
                     except:
                         print("Can`t move {0} to {1}, {2}".format(p, d, sys.exc_info()))
         else:
-            ext = os.path.splitext(p)[1]
+            ext = os.path.splitext(p)[1].lower()
             if ext in list(types.keys()):  # if types.has_key(ext): deprecated
                 d = os.path.join(dest, types[ext])
                 try:
