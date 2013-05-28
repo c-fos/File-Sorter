@@ -5,6 +5,7 @@ import sys
 import time
 
 types = {'directory': 'Directory',
+         'other': 'Unrecognized',
          '': 'Text',
          '.apk': 'Android',
          '.iso': 'Software',
@@ -110,7 +111,7 @@ def dir_clean(destination):
                 os.rmdir(p)
 
 
-def sort_files(folder_name, dest, recur):
+def sort_files(folder_name, dest, recur, other):
     files = os.listdir(folder_name)  # one level file sorting
     for file in files:
         p = os.path.join(folder_name, file)
@@ -122,26 +123,35 @@ def sort_files(folder_name, dest, recur):
                     d = os.path.join(dest, types['directory'])
                     try:
                         shutil.move(p, d)
-                        print("Moving {0} to {1}".format(p, d))
+                        print("Moving \"{0}\" to \"{1}\"".format(p, d))
                     except:
-                        print("Can`t move {0} to {1}, {2}".format(p, d, sys.exc_info()))
+                        print("Can`t move \"{0}\" to \"{1}\", {2}".format(p, d, sys.exc_info()[1]))
         else:
             ext = os.path.splitext(p)[1]
             if ext in list(types.keys()):  # if types.has_key(ext): deprecated
                 d = os.path.join(dest, types[ext])
                 try:
                     shutil.move(p, d)
-                    print("Moving {0} to {1}".format(p, d))
+                    print("Moving \"{0}\" to \"{1}\"".format(p, d))
                 except:
-                    print("Can`t move {0} to {1}, {2}".format(p, d, sys.exc_info()))
+                    print("Can`t move \"{0}\" to \"{1}\", {2}".format(p, d, sys.exc_info()[1]))
             else:
-                print("Leaving {0}".format(p))
+                if other:
+                    d = os.path.join(dest, types['other'])
+                    try:
+                        shutil.move(p, d)
+                        print("Moving \"{0}\" to \"{1}\"".format(p, d))
+                    except:
+                        print("Can`t move \"{0}\" to \"{1}\", {2}".format(p, d, sys.exc_info()[1]))
+                else:
+                    print("Leaving \"{0}\"".format(p))
 
 
 def main():
     parser = argparse.ArgumentParser(description="Program for file sorting by file extension")
     parser.add_argument("-d", "--destination", dest="destination", help="Directory you want to move files or directories to")
     parser.add_argument("-r", "--recursive", action='store_true', default=False,  help="Scan folders recursively. Dangerous due to the loss of information about folders hierarchy.")
+    parser.add_argument("-o", "--other", action='store_true', default=False, help="Move unrecognized files to special directory. That files keeps unmoved by default")
     parser.add_argument("source", help="folder to sort")
     options = parser.parse_args()
 
@@ -160,7 +170,8 @@ def main():
         sys.exit(1)
 
     ensure_dir(destination)
-    sort_files(directory, destination, options.recursive)
+    print(directory, destination, options.recursive, options.other)
+    sort_files(directory, destination, options.recursive, options.other)
     dir_clean(destination)
 
     print(time.time())
