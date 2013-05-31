@@ -1,4 +1,4 @@
-usage: sort.py [-h] [-d DESTINATION] [-r] source
+usage: sort.py [-h] [-d DESTINATION] [-r] [-o] source
 
 Program for file sorting by file extension
 
@@ -11,3 +11,5 @@ optional arguments:
                         Directory you want to move files or directories to
   -r, --recursive       Scan folders recursively. Dangerous due to the loss of
                         information about folders hierarchy.
+  -o, --other           Move unrecognized files to special directory. That
+                        files keeps unmoved by default.
