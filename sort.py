@@ -196,7 +196,6 @@ def sort_files(folder_name, destination, recur, other):
 def cli():
     """
     Get parameters from user and execute sorting
-    :return:
     """
 
     parser = argparse.ArgumentParser(description="Program for file sorting by file extension")
