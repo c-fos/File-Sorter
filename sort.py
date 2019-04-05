@@ -28,9 +28,10 @@ class Classifier:
             'Android': ['.apk'],
             'Software': ['.iso', '.application', '.bin', '.exe', '.air', '.msi', '.deb', '.rpm', '.patch', '.dmg'],
             'Firmware': ['.img', '.rom'],
-            'Databases': ['.sql', '.odb', '.mwb', '.csv', '.sql.gz'],
+            'Databases': ['.sql', '.odb', '.mwb', '.sql.gz', '.sqlite3'],
+            'Data': ['.json', '.csv'],
             'Graphics':
-            ['.xcf', '.psd', '.svg', '.dia', '.png', '.jpg', '.jpeg', '.gif', '.tiff', '.raw', '.eps', '.bmp'],
+            ['.xcf', '.psd', '.svg', '.dia', '.dot', '.png', '.jpg', '.jpeg', '.gif', '.tiff', '.raw', '.eps', '.bmp'],
             'Java': ['.jnlp', '.jar'],
             'Scripts': ['.aspx', '.pl', '.pm', '.js', '.c', '.sh', '.py', '.conf', '.phtml', '.php'],
             'Documents': {
@@ -44,14 +45,15 @@ class Classifier:
             },
             'Flash': ['.swf'],
             'Latex': ['.bib', '.aux', '.dvi', '.bibtex', '.tex'],
-            'Zipped': ['.tgz', '.zip', '.rar', '.tar', '.gz', '.7z', '.bz2', '.tar.gz', '.ova'],
+            'Zipped': ['.tgz', '.zip', '.rar', '.tar', '.gz', '.7z', '.bz2', '.tar.gz', '.ova', '.xz'],
             'Logs': ['.log'],
             'Music': ['.mp3', '.ogg', '.wav', '.wv'],
             'Movies': ['.mp4', '.mkv', '.flv', '.avi', '.mpg'],
             'Bk': ['.bak', '.bk'],
             'Books': ['.epub', '.fb2', '.mobi', '.djvu'],
             'DLLs': ['.dll'],
-            'Torrents': ['.torrent']
+            'Secrets': ['.key', '.pub', '.c2v', '.v2c'],
+            'Torrents': ['.torrent'],
         }
 
     @property
@@ -134,7 +136,7 @@ class Sorter:
     def _move(self, src: Path, tgt: Path):
         try:
             if not tgt.exists():
-                tgt.mkdir()
+                tgt.mkdir(parents=True)
                 logger.info("Directory has been created: %s", tgt)
             shutil.move(str(src), str(tgt))
             logger.info("Moving '%s' to '%s'", src, tgt)
