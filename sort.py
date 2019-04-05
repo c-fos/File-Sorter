@@ -47,7 +47,7 @@ class Classifier:
             'Zipped': ['.tgz', '.zip', '.rar', '.tar', '.gz', '.7z', '.bz2', '.tar.gz', '.ova'],
             'Logs': ['.log'],
             'Music': ['.mp3', '.ogg', '.wav', '.wv'],
-            'Movies': ['.mp4', '.mkv', '.flv', '.avi'],
+            'Movies': ['.mp4', '.mkv', '.flv', '.avi', '.mpg'],
             'Bk': ['.bak', '.bk'],
             'Books': ['.epub', '.fb2', '.mobi', '.djvu'],
             'DLLs': ['.dll'],
