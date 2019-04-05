@@ -8,189 +8,146 @@ import shutil
 import os
 import sys
 import logging
+from pathlib import Path
 
+SCRIPT_DIR = Path(__file__).parent
 
-logging.basicConfig(filename=os.path.join(os.getcwd(), 'file_sorter.log'),
-                    filemode='w',
-                    level=logging.DEBUG,
-                    format='%(levelname)s - %(message)s')
+logging.basicConfig(
+    filename=SCRIPT_DIR / 'file_sorter.log', filemode='w', level=logging.DEBUG, format='%(levelname)s - %(message)s')
+
 logger = logging.getLogger()
-types = {'directory': 'Directory',
-         'other': 'Unrecognized',
-         '': 'Text',
-         '.apk': 'Android',
-         '.iso': 'Software',
-         '.sql': 'Databases',
-         '.odb': 'Databases',
-         '.mwb': 'Databases',
-         '.svg': 'Graphics',
-         '.jnlp': 'Java',
-         '.aspx': 'Scripts',
-         '.pl': 'Scripts',
-         '.pm': 'Scripts',
-         '.dia': 'Graphics',
-         '.js': 'Scripts',
-         '.application': 'Software',
-         '.xlsx': 'Documents',
-         '.JPG': 'Graphics',
-         '.csv': 'Databases',
-         '.swf': 'Flash',
-         '.bib': 'Latex',
-         '.c': 'Scripts',
-         '.sh': 'Scripts',
-         '.py': 'Scripts',
-         '.conf': 'Scripts',
-         '.phtml': 'Scripts',
-         '.xls': 'Documents',
-         '.rtf': 'Documents',
-         '.dotx': 'Documents',
-         '.sql.gz': 'Databases',
-         '.tgz': 'Zipped',
-         '.tar.gz': 'Databases',
-         '.pdf': 'PDFs',
-         '.doc': 'Documents',
-         '.docx': 'Documents',
-         '.bin': 'Software',
-         '.exe': 'Software',
-         '.air': 'Software',
-         '.msi': 'Software',
-         '.jar': 'Libraries',
-         '.zip': 'Zipped',
-         '.rar': 'Zipped',
-         '.tar': 'Zipped',
-         '.gz': 'Zipped',
-         '.7z': 'Zipped',
-         '.bz2': 'Zipped',
-         '.htm': 'Documents',
-         '.html': 'Documents',
-         '.php': 'Scripts',
-         '.odt': 'Documents',
-         '.ods': 'Documents',
-         '.ppt': 'Documents',
-         '.xcf': 'Photoshop',
-         '.psd': 'Photoshop',
-         '.log': 'Logs',
-         '.aux': 'Latex',
-         '.dvi': 'Latex',
-         '.bibtex': 'Latex',
-         '.tex': 'Latex',
-         '.mp3': 'Music',
-         '.ogg': 'Music',
-         '.wav': 'Music',
-         '.mp4': 'Movies',
-         '.mkv': 'Movies',
-         '.flv': 'Movies',
-         '.avi': 'Movies',
-         '.png': 'Graphics',
-         '.jpg': 'Graphics',
-         '.jpeg': 'Graphics',
-         '.gif': 'Graphics',
-         '.tiff': 'Graphics',
-         '.raw': 'Graphics',
-         '.bak': 'Bk',
-         '.bk': 'Bk',
-         '.eps': 'Graphics',
-         '.bmp': 'Graphics',
-         '.epub': 'Books',
-         '.fb2': 'Books',
-         '.mobi': 'Books',
-         '.djvu': 'Books',
-         '.deb': 'Software',
-         '.rpm': 'Software',
-         '.patch': 'Software',
-         '.dmg': 'Software',
-         '.txt': 'Text',
-         '.mht': 'Text',
-         '.xml': 'Documents',
-         '.dll': 'Windows DLLs',
-         '.pptx': 'Documents',
-         '.odp': 'Documents',
-         '.wbk': 'Documents',
-         '.torrent': 'Torrents'}
 
 
-def ensure_dir(destination):
-    """
-    Check the existence of destination path
+class Classifier:
+    def __init__(self, other=False):
+        self.other = other
+        self._groups = {
+            'Directory': ['directory'],
+            'Unrecognized': ['other'],
+            'Empty': ['""'],
+            'Android': ['.apk'],
+            'Software': ['.iso', '.application', '.bin', '.exe', '.air', '.msi', '.deb', '.rpm', '.patch', '.dmg'],
+            'Firmware': ['.img', '.rom'],
+            'Databases': ['.sql', '.odb', '.mwb', '.csv', '.sql.gz'],
+            'Graphics':
+            ['.xcf', '.psd', '.svg', '.dia', '.png', '.jpg', '.jpeg', '.gif', '.tiff', '.raw', '.eps', '.bmp'],
+            'Java': ['.jnlp', '.jar'],
+            'Scripts': ['.aspx', '.pl', '.pm', '.js', '.c', '.sh', '.py', '.conf', '.phtml', '.php'],
+            'Documents': {
+                "Doc-like": ['.doc', '.docx', '.rtf', '.odt'],
+                "Xls-like": ['.xlsx', '.xls', '.ods'],
+                "PDF": ['.pdf', '.chm'],
+                "Ppt-like": ['.pptx', '.odp', '.ppt'],
+                "Text": ['.txt', '.mht', '.htm', '.html'],
+                "Other": ['.dotx', '.xml'],
+                "Mindmaps": ['.xmind']
+            },
+            'Flash': ['.swf'],
+            'Latex': ['.bib', '.aux', '.dvi', '.bibtex', '.tex'],
+            'Zipped': ['.tgz', '.zip', '.rar', '.tar', '.gz', '.7z', '.bz2', '.tar.gz', '.ova'],
+            'Logs': ['.log'],
+            'Music': ['.mp3', '.ogg', '.wav', '.wv'],
+            'Movies': ['.mp4', '.mkv', '.flv', '.avi'],
+            'Bk': ['.bak', '.bk'],
+            'Books': ['.epub', '.fb2', '.mobi', '.djvu'],
+            'DLLs': ['.dll'],
+            'Torrents': ['.torrent']
+        }
 
-    :param destination: - path
-    :return: None. Create directories
-    """
+    @property
+    def groups(self):
+        return list(self._groups.keys())
 
-    if not os.path.exists(destination):
-        logger.info("Directory has been created: {}".format(destination))
-        os.makedirs(destination)
+    @property
+    def types(self):
+        try:
+            return self._types
+        except AttributeError:
+            self._types = {}
+            for key, value in self._groups.items():
+                if isinstance(value, list):
+                    self.types.update({ext.lower(): key for ext in value})
+                elif isinstance(value, dict):
+                    for subdir_key, subdir_value in value.items():
+                        self.types.update({ext.lower(): f"{key}/{subdir_key}" for ext in subdir_value})
+            return self._types
 
-    for _, _dir in types.items():
-        path = os.path.join(destination, _dir)
-        if not os.path.exists(path):
-            logger.info("Directory has been created: {}".format(path))
-            os.makedirs(path)
-
-
-def dir_clean(destination):
-    """
-    Remove empty dirs from destination directory. We want to keep our data clean and simple, don`t we? =)
-
-    :param destination: path to destination directory
-    :return: None. remove empty dirs from destination directory
-    """
-
-    files = os.listdir(destination)
-    for file in files:
-        p = os.path.join(destination, file)
-        if os.path.isdir(p) is True:
-            include_files = os.listdir(p)
-            if not include_files:
-                logger.info("Directory has been removed: {}".format(p))
-                os.rmdir(p)
+    def choose_group(self, file_path: Path):
+        group = self.types.get(file_path.suffix.lower())
+        if not group and self.other:
+            group = self.types.get('other')
+        return group
 
 
-def sort_files(folder_name, destination, recur, other):
-    """
-    Main sorting algorithm
+class Sorter:
+    def __init__(self, options):
+        self.src_dir = Path(options.source) if options.source else Path.cwd()
+        self.tgt_dir = Path(options.destination)
+        self.in_place = self.src_dir == self.tgt_dir
+        self.recursive = options.recursive
+        self.other = options.other
+        self.cl = Classifier(self.other)
 
-    :param folder_name: path to input folder
-    :param destination: path to output folder
-    :param recur: make sorting recursively
-    :param other: move unrecognized files to "other" directory
-    :return: None/ Move files to right places
-    """
+        self._validate()
 
-    files = os.listdir(folder_name)  # one level file sorting
-    for file in files:
-        p = os.path.join(folder_name, file)
-        if os.path.isdir(p):
-            if recur:
-                sort_files(p, destination, recur, other)
+    def prepare(self):
+        """ Check the existence of destination path and create dirs """
+
+        if not self.tgt_dir.exists():
+            self.tgt_dir.mkdir()
+            logger.info("Directory has been created: %s", self.tgt_dir)
+
+    def sort(self):
+        to_exclude = {*self.cl.groups, "sort.py", 'file_sorter.log'} if self.in_place else set()
+        self._recursive_sort(self.src_dir, to_exclude)
+
+    def clean(self):
+        """ Remove empty dirs from destination directory """
+        files = os.listdir(self.tgt_dir)
+        for file in files:
+            p = self.tgt_dir / file
+            if p.is_dir():
+                include_files = os.listdir(p)
+                if not include_files:
+                    p.rmdir()
+                    logger.info("Directory has been removed: %s", p)
+
+    def _recursive_sort(self, start_dir: Path, exclude: set):
+        """ Main sorting algorithm """
+        files = os.listdir(start_dir)
+        for file in [i for i in files if i not in exclude]:
+            p = start_dir / file
+            if p.is_dir():
+                if self.recursive:
+                    self._recursive_sort(p, set())
+                else:
+                    if file not in self.cl.groups:
+                        d = self.tgt_dir / self.cl.types['directory']
+                        self._move(p, d)
             else:
-                if file not in list(types.values()):
-                    d = os.path.join(destination, types['directory'])
-                    try:
-                        shutil.move(p, d)
-                        logger.info("Moving directory '{0}' to '{1}'".format(p, d))
-                    except shutil.Error:
-                        logger.warning("Can`t move directory '{0}' to '{1}'. {2}".format(p, d, sys.exc_info()[1]))
-                    except PermissionError:
-                        logger.warning("Can`t move directory '{0}' to '{1}', Permission denied".format(p, d))
-        else:
-            ext = os.path.splitext(p)[1].lower()
-            if ext in list(types.keys()):
-                d = os.path.join(destination, types[ext])
-                try:
-                    shutil.move(p, d)
-                    logger.info("Moving file '{0}' to '{1}'".format(p, d))
-                except shutil.Error:
-                    logger.warning("Can`t move file '{0}' to '{1}'. {2}".format(p, d, sys.exc_info()[1]))
-            elif other:
-                d = os.path.join(destination, types['other'])
-                try:
-                    shutil.move(p, d)
-                    logger.info("Moving file '{0}' to '{1}'".format(p, d))
-                except shutil.Error:
-                    logger.warning("Can`t move '{0}' to '{1}', {2}".format(p, d, sys.exc_info()[1]))
-            else:
-                logger.info("Leaving '{0}'".format(p))
+                group = self.cl.choose_group(p)
+                if not group:
+                    logger.info("Leaving '%s'", p)
+                    continue
+                self._move(p, self.tgt_dir / group)
+
+    def _move(self, src: Path, tgt: Path):
+        try:
+            if not tgt.exists():
+                tgt.mkdir()
+                logger.info("Directory has been created: %s", tgt)
+            shutil.move(str(src), str(tgt))
+            logger.info("Moving '%s' to '%s'", src, tgt)
+        except shutil.Error as err:
+            logger.warning("Can`t move '%s' to '%s': %s", src, tgt, str(err))
+        except PermissionError:
+            logger.warning("Can`t move '%s' to '%s': Permission denied", src, tgt)
+
+    def _validate(self):
+        if not self.src_dir.exists():
+            raise ValueError('Source dir does not exists')
+        if not self.tgt_dir:
+            raise ValueError("Invalid destination")
 
 
 def cli():
@@ -202,33 +159,30 @@ def cli():
     parser = argparse.ArgumentParser(description="Program for file sorting by file extension")
     parser.add_argument("source", help="folder to sort")
     parser.add_argument("destination", help="Directory you want to move files or directories to")
-    parser.add_argument("-r", "--recursive", action='store_true', default=False,
-                        help="Scan folders recursively. Dangerous due to the loss of information"
-                             " about folders hierarchy.")
-    parser.add_argument("-o", "--other", action='store_true', default=False,
-                        help="Move unrecognized files to special directory. That files keeps unmoved by default")
+    parser.add_argument(
+        "-r",
+        "--recursive",
+        action='store_true',
+        default=False,
+        help="Scan folders recursively. Dangerous due to the loss of information"
+        " about folders hierarchy.")
+    parser.add_argument(
+        "-o",
+        "--other",
+        action='store_true',
+        default=False,
+        help="Move unrecognized files to special directory. That files keeps unmoved by default")
+
     options = parser.parse_args()
-
-    if options.source:
-        directory = options.source
-        logger.info("Source directory: '{}'".format(directory))
-    else:
-        directory = os.getcwd()
-        logger.info("Source directory: '{}'".format(directory))
-    destination = options.destination
-    logger.info("Destination directory: '{}'".format(destination))
-    if not os.path.exists(directory):
-        logger.error("Invalid directory: {0}".format(directory))
+    try:
+        sorter = Sorter(options)
+        sorter.prepare()
+        sorter.sort()
+        sorter.clean()
+        logger.info("Sorting complete!")
+    except Exception as err:
+        logger.exception(err)
         sys.exit(1)
-    if not destination:
-        logger.error("Invalid destination")
-        sys.exit(1)
-
-    ensure_dir(destination)
-    sort_files(directory, destination, options.recursive, options.other)
-    dir_clean(destination)
-
-    logger.info("Sorting complete!")
 
 
 if __name__ == "__main__":
